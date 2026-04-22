@@ -122,13 +122,13 @@ Barcha endpoint'lar `/auth` prefiksi bilan boshlanadi.
 
 | Method | URL | Tavsif | Auth |
 |---|---|---|---|
-| `POST` | `/auth/register` | Yangi hisob yaratish | ❌ |
-| `POST` | `/auth/login` | Tizimga kirish (cookie) | ❌ |
+| `POST` | `/auth/register` | Yangi hisob yaratish | ✅ |
+| `POST` | `/auth/login` | Tizimga kirish (cookie) | ✅ |
 | `POST` | `/auth/logout` | Tizimdan chiqish | ✅ |
 | `POST` | `/auth/refresh` | Access token yangilash | Cookie |
 | `GET` | `/auth/me` | Joriy foydalanuvchi | ✅ |
-| `GET` | `/auth/verify-email?token=...` | Email tasdiqlash | ❌ |
-| `GET` | `/` | Server holati | ❌ |
+| `GET` | `/auth/verify-email?token=...` | Email tasdiqlash | ✅ |
+| `GET` | `/` | Server holati | ✅ |
 
 ---
 
