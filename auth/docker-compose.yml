@@ -1,0 +1,94 @@
+services:                                    # Loyihadagi barcha xizmatlar (konteynerlar) boshlanishi
+
+  # --- BACKEND SERVISI ---
+  backend:                                   # Backend servisi nomi
+    container_name: backend                   # Konteynerga beriladigan maxsus nom
+    build:                                   # Imeyjni qurish bo'limi
+      context: .                             # Dockerfile qidiriladigan papka (joriy papka)
+      dockerfile: Dockerfile                 # Qurish uchun aynan shu Dockerfile-dan foydalanadi
+    ports:                                   # Portlarni bog'lash
+      - "8000:8000"                          # Lokal port : Konteyner porti
+    # volumes:                                 # Ma'lumotlarni bog'lash (Hot reload uchun)
+    #   - .:/app                               # Lokal kodni konteynerdagi /app papkasiga ulab qo'yadi
+    
+    # Konteyner yonganda: 5s kutadi -> Bazani yangilaydi -> FastAPI-ni yoqadi (--reload hot-reload uchun)
+    command: sh -c "sleep 5 && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/"
+    
+    env_file:
+      - .env
+    environment:                             # Muhit o'zgaruvchilari (Sozlamalar)
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB} # Baza manzili
+      - REDIS_URL=redis://redis:${REDIS_PORT} # Redis manzili
+      - SECRET_KEY=${SECRET_KEY}             # Maxfiy xavfsizlik kaliti
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED} # Loglarni terminalda darhol chiqarish
+    
+    depends_on:                              # Bog'liqliklar
+      db:                                    # Bazaga bog'liq
+        condition: service_healthy           # Baza sog'lom bo'lsagina backendni yoqadi
+      redis:                                 # Redis-ga bog'liqlik
+        condition: service_started           # Redis yoqilsa kifoya
+
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - __pycache__
+            - .git
+        - action: rebuild
+          path: requirements.txt
+
+    restart: always                          # Xatolik bo'lsa, o'zi qayta ishga tushadi
+
+  # --- MA'LUMOTLAR BAZASI (POSTGRESQL) ---
+  db:                                        # Baza servisi nomi
+    container_name: db                       # Konteynerga beriladigan maxsus nom
+    image: postgres:15-alpine                # Postgres-ning yengil variantini ishlatadi
+    environment:                             # Baza sozlamalari (.env fayldan oladi)
+      - POSTGRES_USER=${POSTGRES_USER}       # Baza foydalanuvchisi
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # Baza paroli
+      - POSTGRES_DB=${POSTGRES_DB}           # Baza nomi
+    volumes:                                 # Baza ma'lumotlarini saqlash
+      - postgres_data:/var/lib/postgresql/data # Baza o'chsa ham ma'lumot qolishi uchun
+    ports:                                   # Portlarni ulash
+      - "${POSTGRES_PORT}:5432"  # Baza porti (5432)
+    healthcheck:                             # Baza ishga tayyorligini tekshirish
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] # Tekshirish buyrug'i
+      interval: 5s                           # Har 5 soniyada
+      timeout: 5s                            # Maksimal kutish
+      retries: 5                             # Urinishlar soni
+    restart: always                          # Avtomatik restart
+
+
+  # --- KESH XOTIRA (REDIS) ---
+  redis:                                     # Redis servisi nomi
+    container_name: redis                    # Konteynerga beriladigan maxsus nom
+    image: redis:7-alpine                    # Redis-ning alpine versiyasi
+    ports:                                   # Portlar
+      - "${REDIS_PORT}:6379"                 # Lokal port : Redis porti
+    healthcheck:                             # Sog'lomlikni tekshirish
+      test: ["CMD", "redis-cli", "ping"]     # Redis-ga 'ping' tashlaydi
+      interval: 5s                           # 5 soniyada bir
+      timeout: 3s                            # 3 soniya kutish
+      retries: 5                             # 5 marta urinish
+
+    restart: always                          # Har doim restart
+
+  # --- BAZANI BOSHQARISH (PGADMIN) ---
+  pgadmin:                                   # pgAdmin servisi nomi
+    container_name: pgadmin      # Konteynerga beriladigan maxsus nom
+    image: dpage/pgadmin4                    # Tayyor interfeys imeyji
+    environment:                             # pgAdmin sozlamalari
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL} # Panelga kirish emaili
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD} # Panel paroli
+    ports:                                   # Port ulanishi
+      - "5050:80"                            # localhost:5050 orqali kirasiz
+    depends_on:                              # Bog'liqlik
+      db:
+        condition: service_healthy           # Baza to'liq tayyor bo'lgandan keyin pgAdminni yoqish
+    restart: always                          # Avtomatik restart
+
+# --- DOIMIY MA'LUMOTLAR OMBORI ---
+volumes:                                     # Docker disklari (Volume)
+  postgres_data:                             # Baza uchun alohida doimiy disk nomi

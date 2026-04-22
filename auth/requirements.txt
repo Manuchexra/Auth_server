@@ -1,0 +1,15 @@
+fastapi
+SQLAlchemy==2.0.48
+asyncpg
+psycopg2-binary
+alembic==1.7.7
+python-jose==3.3.0
+passlib[argon2]==1.7.4
+uvicorn==0.15.0
+email-validator
+pydantic-settings
+fastapi-mail==1.4.1
+jinja2==3.1.2
+argon2-cffi>=21.3.0
+redis>=4.5.0
+aioredis>=2.0.1
